@@ -1,0 +1,11 @@
+# Review ownership. Keep in sync with the repository's protected branch rules.
+*                       @alexanderkoh
+
+/.github/               @alexanderkoh
+/SECURITY.md            @alexanderkoh
+/CLAUDE.md              @alexanderkoh
+
+# Contracts carry the highest blast radius: every change here is
+# reviewed, including tooling and deployment scripts.
+/contracts/          @alexanderkoh
+/scripts/            @alexanderkoh

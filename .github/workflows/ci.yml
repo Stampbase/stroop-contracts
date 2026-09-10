@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Detect workspace
+        id: detect
+        run: |
+          if [ -f Cargo.toml ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "No Cargo.toml yet — build steps activate once the workspace is scaffolded."
+          fi
+
+      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
+        if: steps.detect.outputs.ready == 'true'
+        with:
+          components: rustfmt, clippy
+          target: wasm32v1-none
+
+      - name: Format
+        if: steps.detect.outputs.ready == 'true'
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        if: steps.detect.outputs.ready == 'true'
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Test
+        if: steps.detect.outputs.ready == 'true'
+        run: cargo test --all
+
+      - name: Build
+        if: steps.detect.outputs.ready == 'true'
+        run: cargo build --all
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Detect workspace
+        id: detect
+        run: |
+          if [ -f Cargo.toml ]; then echo "ready=true" >> "$GITHUB_OUTPUT"; else echo "ready=false" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
+        if: steps.detect.outputs.ready == 'true'
+      - name: Install cargo-audit
+        if: steps.detect.outputs.ready == 'true'
+        run: cargo install cargo-audit --locked
+      - name: Audit
+        if: steps.detect.outputs.ready == 'true'
+        run: cargo audit
